@@ -11,6 +11,7 @@ local defaultConfig = {
   enable = true,
   throttle = false,
   max_lines = 0, -- no limit
+  fake_relative_number = false,
 }
 
 local config = {}
@@ -400,6 +401,21 @@ local function set_lines(bufnr, lines)
   return redraw
 end
 
+local function process_relativeline_data(line, higher_line, last_relativeline)
+  local relativeline_count = last_relativeline
+  local i = line
+  while i < higher_line do
+    local foldend = api.nvim_call_function('foldclosedend', { i })
+    if (foldend ~= -1) then
+      i = foldend + 1
+    else
+      i = i + 1
+    end
+    relativeline_count = relativeline_count + 1
+  end
+  return relativeline_count, line, last_relativeline + relativeline_count
+end
+
 local function highlight_contexts(bufnr, ctx_bufnr, contexts)
   api.nvim_buf_clear_namespace(ctx_bufnr, ns, 0, -1)
 
@@ -483,6 +499,7 @@ local function open(ctx_nodes)
 
   local context_text = {}
   local lno_text = {}
+  local lno = {} -- store only number
   local contexts = {}
 
   for _, node in ipairs(ctx_nodes) do
@@ -496,16 +513,32 @@ local function open(ctx_nodes)
       indents = get_indents(lines),
     }
 
-    table.insert(context_text, text)
-    table.insert(lno_text, build_lno_str(range[1]+1, gutter_width-1))
+    context_text[#context_text+1] = text
+    lno[#lno+1] = range[1]+1 -- for later using
   end
 
+  -- use complex algorithm to solve relative number with folding
+  if config.fake_relative_number
+      and vim.api.nvim_win_get_option(0, 'relativenumber') then
+    local cursor_line = vim.api.nvim_win_get_cursor(0)[1]
+    local last_line = cursor_line
+    local last_relativeline = 0 -- for relative line can reuse higher line
+    -- loop in reverse to get line near cursor line first
+    for i=#lno,1,-1 do
+      lno[i], last_line, last_relativeline
+        = process_relativeline_data(lno[i], last_line, last_relativeline)
+    end
+  end
+
+  for _, ln in ipairs(lno) do
+    lno_text[#lno_text+1] = build_lno_str(ln, gutter_width-1)
+  end
+
+  set_lines(gbufnr, lno_text) -- set number regardless of context not changing
   if not set_lines(ctx_bufnr, context_text) then
     -- Context didn't change, can return here
     return
   end
-
-  set_lines(gbufnr, lno_text)
 
   highlight_contexts(bufnr, ctx_bufnr, contexts)
 end
