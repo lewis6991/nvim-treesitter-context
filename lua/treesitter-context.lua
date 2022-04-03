@@ -310,6 +310,22 @@ local function reverse_table(t)
   return r
 end
 
+local function process_relativeline_data(line, higher_line, last_relativeline)
+  local relativeline_count = last_relativeline
+  local i = line
+  while i < higher_line do
+    local foldend = api.nvim_call_function('foldclosedend', { i })
+    if (foldend ~= -1) then
+      i = foldend + 1
+    else
+      i = i + 1
+    end
+    relativeline_count = relativeline_count + 1
+  end
+  return relativeline_count, line, relativeline_count
+end
+
+
 local function get_parent_matches()
   if not parsers.has_parser() then
     return
@@ -323,7 +339,8 @@ local function get_parent_matches()
   end
 
   local buf_ft = vim.bo.filetype
-  local topline = vim.fn.line('w0')
+  local relative_topline = process_relativeline_data(vim.fn.line('w0'), lnum, 0)
+  local topline = lnum - relative_topline
 
   local max_lines = config.max_lines
   if config.auto_max_lines then
@@ -457,21 +474,6 @@ local function set_lines(bufnr, lines)
   end
 
   return redraw
-end
-
-local function process_relativeline_data(line, higher_line, last_relativeline)
-  local relativeline_count = last_relativeline
-  local i = line
-  while i < higher_line do
-    local foldend = api.nvim_call_function('foldclosedend', { i })
-    if (foldend ~= -1) then
-      i = foldend + 1
-    else
-      i = i + 1
-    end
-    relativeline_count = relativeline_count + 1
-  end
-  return relativeline_count, line, relativeline_count
 end
 
 local function highlight_contexts(bufnr, ctx_bufnr, contexts)
