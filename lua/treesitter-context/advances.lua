@@ -71,6 +71,7 @@ local function get_parent_matches(config, node, buf_ft)
   end
 
   local real_topline = topline + #parent_matches
+  lines = 0
 
   for i = #possible_parent_matches, 1, -1 do
     local row

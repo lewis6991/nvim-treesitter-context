@@ -355,6 +355,7 @@ local function get_parent_matches()
   end
 
   local real_topline = topline + #parent_matches
+  lines = 0
 
   for i = #possible_parent_matches, 1, -1 do
     local row = possible_parent_matches[i]:start()
