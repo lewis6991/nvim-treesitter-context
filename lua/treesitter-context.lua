@@ -335,8 +335,8 @@ local function get_parent_matches()
     local row = node:start()
 
     if is_valid(node, vim.bo.filetype)
-        and row > 0
         and row < (topline - 1)
+        and row >= 0
         and row ~= last_row then
       table.insert(parent_matches, node)
 
