@@ -327,6 +327,7 @@ local function get_parent_matches()
 
   local possible_parent_matches = {}
   local parent_matches = {}
+  local full_parent_matches = {}
   local lines = 0
   local last_row = -1
   local topline = vim.fn.line('w0')
@@ -334,15 +335,16 @@ local function get_parent_matches()
   while node do
     local row = node:start()
 
-    if is_valid(node, vim.bo.filetype)
-        and row < (topline - 1)
+    if is_valid(node, buf_ft)
         and row >= 0
         and row ~= last_row then
-      table.insert(parent_matches, node)
+      last_row = row
 
-      if row ~= last_row then
+      if row < (topline - 1) then
         lines = lines + 1
-        last_row = row
+        parent_matches[#parent_matches+1] = node
+      else
+        possible_parent_matches[#possible_parent_matches+1] = node
       end
 
       if config.max_lines > 0 and lines >= config.max_lines then
@@ -352,7 +354,41 @@ local function get_parent_matches()
     node = node:parent()
   end
 
-  return reverse_table(parent_matches)
+  local real_topline = topline + #parent_matches
+
+  for i = #possible_parent_matches, 1, -1 do
+    local row = possible_parent_matches[i]:start()
+
+    -- check if line is not visible
+    if row then
+      if row < (real_topline - 1) then
+        table.insert(full_parent_matches, 1, possible_parent_matches[i])
+        real_topline = real_topline + 1
+        lines = lines + 1
+        if config.max_lines > 0 and lines >= config.max_lines then
+          break
+        end
+      else -- else break when line is visible
+        break
+      end
+    end
+  end
+
+  -- Merge with origin parents if exist
+  if #full_parent_matches == 0 then
+    full_parent_matches = parent_matches
+  else
+    for _, parent in ipairs(parent_matches) do
+      -- check max_lines first because can be lines > 0
+      if config.max_lines > 0 and lines >= config.max_lines then
+        break
+      end
+      table.insert(full_parent_matches, parent)
+      lines = lines + 1
+    end
+  end
+
+  return reverse_table(full_parent_matches)
 end
 
 
