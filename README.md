@@ -36,6 +36,7 @@ require'treesitter-context'.setup{
     max_lines = 0, -- How many lines the window should span. Values <= 0 mean no limit.
     auto_max_lines = false, -- Will disable max_lines -- base on cursor and min to 1
     auto_max_lines_padding = 0, -- Padding from cursor to auto set max_lines
+    fake_relative_number = false, -- Fake relative number support (may decrease performance)
     patterns = { -- Match patterns for TS nodes. These get wrapped to match at word boundaries.
         -- For all filetypes
         -- Note that setting an entry here replaces all other patterns for this entry.
