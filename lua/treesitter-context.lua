@@ -471,7 +471,7 @@ local function process_relativeline_data(line, higher_line, last_relativeline)
     end
     relativeline_count = relativeline_count + 1
   end
-  return relativeline_count, line, last_relativeline + relativeline_count
+  return relativeline_count, line, relativeline_count
 end
 
 local function highlight_contexts(bufnr, ctx_bufnr, contexts)
