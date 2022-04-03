@@ -27,13 +27,12 @@ local function reverse_table(t)
   return r
 end
 
-local function get_parent_matches(config, node, buf_ft)
+local function get_parent_matches(config, node, buf_ft, topline, max_lines)
   local parent_matches = {}
   local possible_parent_matches = {}
   local full_parent_matches = {}
   local lines = 0
   local last_row = -1
-  local topline = vim.fn.line('w0')
 
   local not_break = true
   while not_break and node do
@@ -57,7 +56,7 @@ local function get_parent_matches(config, node, buf_ft)
             lines = lines + 1
             parent_matches[#parent_matches + 1] = advance_node
 
-            if config.max_lines > 0 and lines >= config.max_lines then
+            if max_lines > 0 and lines >= max_lines then
               not_break = false
               break
             end
@@ -75,9 +74,7 @@ local function get_parent_matches(config, node, buf_ft)
 
   for i = #possible_parent_matches, 1, -1 do
     local row
-    if possible_parent_matches[i].before then
-      row = possible_parent_matches[i].before:start()
-    elseif possible_parent_matches[i].begin then
+    if possible_parent_matches[i].begin then
       row = possible_parent_matches[i].begin:start()
     else
       row = possible_parent_matches[i].node:start()
@@ -89,7 +86,7 @@ local function get_parent_matches(config, node, buf_ft)
         table.insert(full_parent_matches, 1, possible_parent_matches[i])
         real_topline = real_topline + 1
         lines = lines + 1
-        if config.max_lines > 0 and lines >= config.max_lines then
+        if max_lines > 0 and lines >= max_lines then
           break
         end
       else -- else break when line is visible
@@ -104,7 +101,7 @@ local function get_parent_matches(config, node, buf_ft)
   else
     for _, parent in ipairs(parent_matches) do
       -- check max_lines first because can be lines > 0
-      if config.max_lines > 0 and lines >= config.max_lines then
+      if max_lines > 0 and lines >= max_lines then
         break
       end
       table.insert(full_parent_matches, parent)

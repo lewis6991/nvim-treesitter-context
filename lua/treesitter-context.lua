@@ -12,6 +12,8 @@ local defaultConfig = {
   enable = true,
   throttle = false,
   max_lines = 0, -- no limit
+  auto_max_lines = false,
+  auto_max_lines_padding = 0,
 }
 
 local config = {}
@@ -320,9 +322,16 @@ local function get_parent_matches()
   end
 
   local buf_ft = vim.bo.filetype
+  local topline = vim.fn.line('w0')
+
+  local max_lines = config.max_lines
+  if config.auto_max_lines then
+    local padding = config.auto_max_lines_padding
+    max_lines = math.max(lnum - topline - padding, 1)
+  end
 
   if advances.is_advance(config, buf_ft) then
-    return advances.get_parent_matches(config, node, buf_ft)
+    return advances.get_parent_matches(config, node, buf_ft, topline, max_lines)
   end
 
   local possible_parent_matches = {}
@@ -330,7 +339,6 @@ local function get_parent_matches()
   local full_parent_matches = {}
   local lines = 0
   local last_row = -1
-  local topline = vim.fn.line('w0')
 
   while node do
     local row = node:start()
@@ -347,7 +355,7 @@ local function get_parent_matches()
         possible_parent_matches[#possible_parent_matches+1] = node
       end
 
-      if config.max_lines > 0 and lines >= config.max_lines then
+      if max_lines > 0 and lines >= max_lines then
         break
       end
     end
@@ -366,7 +374,7 @@ local function get_parent_matches()
         table.insert(full_parent_matches, 1, possible_parent_matches[i])
         real_topline = real_topline + 1
         lines = lines + 1
-        if config.max_lines > 0 and lines >= config.max_lines then
+        if max_lines > 0 and lines >= max_lines then
           break
         end
       else -- else break when line is visible
@@ -381,7 +389,7 @@ local function get_parent_matches()
   else
     for _, parent in ipairs(parent_matches) do
       -- check max_lines first because can be lines > 0
-      if config.max_lines > 0 and lines >= config.max_lines then
+      if max_lines > 0 and lines >= max_lines then
         break
       end
       table.insert(full_parent_matches, parent)
