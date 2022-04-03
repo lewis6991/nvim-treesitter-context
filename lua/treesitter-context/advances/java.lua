@@ -41,7 +41,7 @@ return function(node)
     }
     -- else
     local else_node = node:field('alternative')[1]
-    if else_node then
+    if else_node and else_node:type() == 'block' then
       ctx_nodes[#ctx_nodes + 1] = {
         node = node,
         begin = else_node,
