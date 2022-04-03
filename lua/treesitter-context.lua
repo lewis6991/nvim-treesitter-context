@@ -6,6 +6,7 @@ local parsers = require'nvim-treesitter.parsers'
 local utils = require'treesitter-context.utils'
 local slice = utils.slice
 local word_pattern = utils.word_pattern
+local advances = require('treesitter-context.advances')
 
 local defaultConfig = {
   enable = true,
@@ -122,8 +123,13 @@ local function find_node(node, type)
 end
 
 local get_text_for_node = function(node)
-  local type = get_type_pattern(node, config.patterns.default) or node:type()
   local filetype = vim.bo.filetype
+
+  if advances.is_advance(config, filetype) then
+    return advances.get_text_for_node(node)
+  end
+
+  local type = get_type_pattern(node, config.patterns.default) or node:type()
 
   local skip_leading_type = (skip_leading_types[type] or {})[filetype]
   if skip_leading_type then
@@ -172,7 +178,7 @@ local get_text_for_node = function(node)
 
   local range = {start_row, start_col, end_row, end_col}
 
-  return lines, range
+  return node, lines, range
 end
 
 -- Merge lines, removing the indentation after 1st line
@@ -313,6 +319,13 @@ local function get_parent_matches()
     return
   end
 
+  local buf_ft = vim.bo.filetype
+
+  if advances.is_advance(config, buf_ft) then
+    return advances.get_parent_matches(config, node, buf_ft)
+  end
+
+  local possible_parent_matches = {}
   local parent_matches = {}
   local lines = 0
   local last_row = -1
@@ -424,7 +437,8 @@ local function highlight_contexts(bufnr, ctx_bufnr, contexts)
     local indents = context.indents
     local lines = context.lines
 
-    local start_row_abs = context.node:start()
+    -- local start_row_abs = context.node:start()
+    local start_row_abs = start_row -- advacnce made node start changed
 
     for capture, node in query:iter_captures(root, bufnr, start_row, context.node:end_()) do
       local node_start_row, node_start_col, node_end_row, node_end_col = node:range()
@@ -486,11 +500,11 @@ local function open(ctx_nodes)
   local contexts = {}
 
   for _, node in ipairs(ctx_nodes) do
-    local lines, range = get_text_for_node(node)
+    local ctx_node, lines, range = get_text_for_node(node)
     local text = merge_lines(lines)
 
     contexts[#contexts+1] = {
-      node = node,
+      node = ctx_node,
       lines = lines,
       range = range,
       indents = get_indents(lines),
@@ -585,6 +599,7 @@ function M.setup(options)
   config                = vim.tbl_deep_extend("force", {}, defaultConfig, userOptions)
   config.patterns       = vim.tbl_deep_extend("force", {}, DEFAULT_TYPE_PATTERNS, userOptions.patterns or {})
   config.exact_patterns = vim.tbl_deep_extend("force", {}, userOptions.exact_patterns or {})
+  config.advances       = vim.tbl_deep_extend("force", {}, advances.DEFAULT_ADVANCE_PATTERNS, userOptions.advances or {})
 
   for filetype, patterns in pairs(config.patterns) do
     -- Map with word_pattern only if users don't need exact pattern matching
