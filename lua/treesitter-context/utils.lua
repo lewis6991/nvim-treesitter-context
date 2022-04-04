@@ -1,6 +1,7 @@
 --
 -- utils.lua
 --
+local api = vim.api
 
 local function len(value)
   return #value
@@ -56,9 +57,33 @@ local function word_pattern(p)
   return '%f[%w]' .. p .. '%f[^%w]'
 end
 
+local function reverse_table(t)
+  local r = {}
+
+  if t then
+    r = {}
+    for i = #t, 1, -1 do
+      r[#r+1] = t[i]
+    end
+  end
+
+  return r
+end
+
+local function get_next_line(line)
+  local foldend_line = api.nvim_call_function('foldclosedend', { line })
+  if (foldend_line ~= -1) then
+    return foldend_line + 1
+  else
+    return line + 1
+  end
+end
+
 return {
   len = len,
   slice = slice,
   slice_right = slice_right,
   word_pattern = word_pattern,
+  reverse_table = reverse_table,
+  get_next_line = get_next_line,
 }

@@ -14,20 +14,7 @@ local function is_advance(config, buf_ft)
   return config.advances.enable and config.advances.languages[buf_ft]
 end
 
-local function reverse_table(t)
-  local r = {}
-
-  if t then
-    r = {}
-    for i = #t, 1, -1 do
-      r[#r + 1] = t[i]
-    end
-  end
-
-  return r
-end
-
-local function get_parent_matches(config, node, buf_ft, topline, max_lines)
+local function get_parent_matches(config, node, buf_ft, max_topline, topline, max_lines)
   local parent_matches = {}
   local possible_parent_matches = {}
   local full_parent_matches = {}
@@ -49,7 +36,7 @@ local function get_parent_matches(config, node, buf_ft, topline, max_lines)
       if ctx_node then
         local row = ctx_node:start()
 
-        if row >= 0 and row ~= last_row then
+        if row >= 0 and row ~= last_row and row < (max_topline - 1) then
           last_row = row
 
           if row < (topline - 1) then
@@ -69,7 +56,10 @@ local function get_parent_matches(config, node, buf_ft, topline, max_lines)
     node = node:parent()
   end
 
-  local real_topline = topline + #parent_matches
+  local real_topline = topline
+  for _ = 1, #parent_matches do
+    real_topline = utils.get_next_line(real_topline)
+  end
   lines = 0
 
   for i = #possible_parent_matches, 1, -1 do
@@ -84,7 +74,7 @@ local function get_parent_matches(config, node, buf_ft, topline, max_lines)
     if row then
       if row < (real_topline - 1) then
         table.insert(full_parent_matches, 1, possible_parent_matches[i])
-        real_topline = real_topline + 1
+        real_topline = utils.get_next_line(real_topline)
         lines = lines + 1
         if max_lines > 0 and lines >= max_lines then
           break
@@ -109,7 +99,7 @@ local function get_parent_matches(config, node, buf_ft, topline, max_lines)
     end
   end
 
-  return reverse_table(full_parent_matches)
+  return utils.reverse_table(full_parent_matches)
 end
 
 local function get_text_for_node(advance_node)

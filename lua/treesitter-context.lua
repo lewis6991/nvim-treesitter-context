@@ -297,29 +297,11 @@ function M.do_au_cursor_moved_vertical()
   end
 end
 
-local function reverse_table(t)
-  local r = {}
-
-  if t then
-    r = {}
-    for i = #t, 1, -1 do
-      r[#r+1] = t[i]
-    end
-  end
-
-  return r
-end
-
 local function process_relativeline_data(line, higher_line, last_relativeline)
   local relativeline_count = last_relativeline
   local i = line
   while i < higher_line do
-    local foldend = api.nvim_call_function('foldclosedend', { i })
-    if (foldend ~= -1) then
-      i = foldend + 1
-    else
-      i = i + 1
-    end
+    i = utils.get_next_line(i)
     relativeline_count = relativeline_count + 1
   end
   return relativeline_count, line, relativeline_count
@@ -339,17 +321,18 @@ local function get_parent_matches()
   end
 
   local buf_ft = vim.bo.filetype
-  local relative_topline = process_relativeline_data(vim.fn.line('w0'), lnum, 0)
-  local topline = lnum - relative_topline
-
+  local topline = vim.fn.line('w0')
+  local padding = 0
   local max_lines = config.max_lines
   if config.auto_max_lines then
-    local padding = config.auto_max_lines_padding
-    max_lines = math.max(lnum - topline - padding, 1)
+    local relative_topline = process_relativeline_data(topline, lnum, 0)
+    padding = config.auto_max_lines_padding or 0
+    max_lines = math.max(relative_topline - padding, 1)
   end
+  local max_topline = math.max(lnum - padding, 1)
 
   if advances.is_advance(config, buf_ft) then
-    return advances.get_parent_matches(config, node, buf_ft, topline, max_lines)
+    return advances.get_parent_matches(config, node, buf_ft, max_topline, topline, max_lines)
   end
 
   local possible_parent_matches = {}
@@ -363,7 +346,8 @@ local function get_parent_matches()
 
     if is_valid(node, buf_ft)
         and row >= 0
-        and row ~= last_row then
+        and row ~= last_row
+        and row < (max_topline - 1) then
       last_row = row
 
       if row < (topline - 1) then
@@ -380,7 +364,10 @@ local function get_parent_matches()
     node = node:parent()
   end
 
-  local real_topline = topline + #parent_matches
+  local real_topline = topline
+  for _ = 1, #parent_matches do
+    real_topline = utils.get_next_line(real_topline)
+  end
   lines = 0
 
   for i = #possible_parent_matches, 1, -1 do
@@ -390,7 +377,7 @@ local function get_parent_matches()
     if row then
       if row < (real_topline - 1) then
         table.insert(full_parent_matches, 1, possible_parent_matches[i])
-        real_topline = real_topline + 1
+        real_topline = utils.get_next_line(real_topline)
         lines = lines + 1
         if max_lines > 0 and lines >= max_lines then
           break
@@ -415,7 +402,7 @@ local function get_parent_matches()
     end
   end
 
-  return reverse_table(full_parent_matches)
+  return utils.reverse_table(full_parent_matches)
 end
 
 
