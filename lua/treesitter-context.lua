@@ -611,6 +611,12 @@ function M.setup(options)
     end
   end
 
+  for filetype, action in pairs(config.advances.languages) do
+    if type(action) == 'string' then
+      config.advances.languages[filetype] = config.advances.languages[action]
+    end
+  end
+
   if config.enable then
     M.enable()
   else

@@ -7,6 +7,11 @@ local DEFAULT_ADVANCE_PATTERNS = {
   enable = false,
   languages = {
     java = require('treesitter-context.advances.java'),
+    ecma = require('treesitter-context.advances.ecma'),
+    typescript = 'ecma',
+    typescriptreact = 'ecma',
+    javascript = 'ecma',
+    javascriptreact = 'ecma',
   },
 }
 
