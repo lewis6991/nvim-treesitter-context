@@ -130,6 +130,8 @@ local get_text_for_node = function(node)
 
   if advances.is_advance(config, filetype) then
     return advances.get_text_for_node(node)
+  else
+    node = node.node
   end
 
   local type = get_type_pattern(node, config.patterns.default) or node:type()
@@ -331,78 +333,12 @@ local function get_parent_matches()
   end
   local max_topline = math.max(lnum - padding, 1)
 
-  if advances.is_advance(config, buf_ft) then
-    return advances.get_parent_matches(config, node, buf_ft, max_topline, topline, max_lines)
+  local check_default_pattern = function(local_node)
+    return is_valid(local_node, buf_ft)
   end
 
-  local possible_parent_matches = {}
-  local parent_matches = {}
-  local full_parent_matches = {}
-  local lines = 0
-  local last_row = -1
-
-  while node do
-    local row = node:start()
-
-    if is_valid(node, buf_ft)
-        and row >= 0
-        and row ~= last_row
-        and row < (max_topline - 1) then
-      last_row = row
-
-      if row < (topline - 1) then
-        lines = lines + 1
-        parent_matches[#parent_matches+1] = node
-      else
-        possible_parent_matches[#possible_parent_matches+1] = node
-      end
-
-      if max_lines > 0 and lines >= max_lines then
-        break
-      end
-    end
-    node = node:parent()
-  end
-
-  local real_topline = topline
-  for _ = 1, #parent_matches do
-    real_topline = utils.get_next_line(real_topline)
-  end
-  lines = 0
-
-  for i = #possible_parent_matches, 1, -1 do
-    local row = possible_parent_matches[i]:start()
-
-    -- check if line is not visible
-    if row then
-      if row < (real_topline - 1) then
-        table.insert(full_parent_matches, 1, possible_parent_matches[i])
-        real_topline = utils.get_next_line(real_topline)
-        lines = lines + 1
-        if max_lines > 0 and lines >= max_lines then
-          break
-        end
-      else -- else break when line is visible
-        break
-      end
-    end
-  end
-
-  -- Merge with origin parents if exist
-  if #full_parent_matches == 0 then
-    full_parent_matches = parent_matches
-  else
-    for _, parent in ipairs(parent_matches) do
-      -- check max_lines first because can be lines > 0
-      if max_lines > 0 and lines >= max_lines then
-        break
-      end
-      table.insert(full_parent_matches, parent)
-      lines = lines + 1
-    end
-  end
-
-  return utils.reverse_table(full_parent_matches)
+  return advances.get_parent_matches(config, node, buf_ft, max_topline,
+    topline, max_lines, check_default_pattern)
 end
 
 

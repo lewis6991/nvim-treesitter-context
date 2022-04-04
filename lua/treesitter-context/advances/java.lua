@@ -1,5 +1,5 @@
-return function(node)
-  local ctx_nodes = {}
+return function(node, check_default_pattern)
+  local advance_nodes = {}
 
   local node_type = node:type()
   if
@@ -10,7 +10,7 @@ return function(node)
     or node_type == 'record_declaration'
     or node_type == 'enum_declaration'
   then
-    ctx_nodes[#ctx_nodes + 1] = {
+    advance_nodes[#advance_nodes + 1] = {
       node = node,
       begin_with = node:field('name')[1],
       end_before = node:field('body')[1],
@@ -27,14 +27,14 @@ return function(node)
     or node_type == 'lambda_expression'
     or node_type == 'switch_expression'
   then
-    ctx_nodes[#ctx_nodes + 1] = {
+    advance_nodes[#advance_nodes + 1] = {
       node = node,
       end_before = node:field('body')[1],
       end_before_extend_col = 1,
     }
   elseif node_type == 'if_statement' then
     -- if
-    ctx_nodes[#ctx_nodes + 1] = {
+    advance_nodes[#advance_nodes + 1] = {
       node = node,
       end_before = node:field('consequence')[1],
       end_before_extend_col = 1,
@@ -42,13 +42,19 @@ return function(node)
     -- else
     local else_node = node:field('alternative')[1]
     if else_node and else_node:type() == 'block' then
-      ctx_nodes[#ctx_nodes + 1] = {
+      advance_nodes[#advance_nodes + 1] = {
         node = node,
         begin_with = else_node,
       }
     end
+  elseif node_type == 'switch_block_statement_group' then
+    -- current case of switch
+    advance_nodes[#advance_nodes + 1] = {
+      node = node,
+    }
+  end
+  -- (( Get all case of switch ))
   -- elseif node_type == 'switch_block' then
-  --   -- all case of switch
   --   local child_count = node:child_count()
   --   for i = 0, child_count - 1  do
   --     ctx_nodes[#ctx_nodes + 1] = {
@@ -56,12 +62,11 @@ return function(node)
   --       begin_with = node:child(i),
   --     }
   --   end
-  elseif node_type == 'switch_block_statement_group' then
-    -- current case of switch
-    ctx_nodes[#ctx_nodes + 1] = {
-      node = node,
-    }
-  end
+  -- end
+  -- (( fallback to default pattern check ))
+  -- elseif check_default_pattern(node) then
+  --   advance_nodes[#advance_nodes + 1] = { node = node }
+  -- end
 
-  return ctx_nodes
+  return advance_nodes
 end

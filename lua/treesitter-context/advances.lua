@@ -14,13 +14,22 @@ local function is_advance(config, buf_ft)
   return config.advances.enable and config.advances.languages[buf_ft]
 end
 
+local function get_default_pattern_advance_nodes(node, check_default_pattern)
+  local advance_nodes = {}
+  if check_default_pattern(node) then
+    advance_nodes[#advance_nodes + 1] = { node = node }
+  end
+  return advance_nodes
+end
+
 local function get_parent_matches(
   config,
   node,
   buf_ft,
   max_topline,
   topline,
-  max_lines
+  max_lines,
+  check_default_pattern
 )
   local parent_matches = {}
   local possible_parent_matches = {}
@@ -28,9 +37,16 @@ local function get_parent_matches(
   local lines = 0
   local last_row = -1
 
+  local get_advance_nodes
+  if is_advance(config, buf_ft) then
+    get_advance_nodes = config.advances.languages[buf_ft]
+  else
+    get_advance_nodes = get_default_pattern_advance_nodes
+  end
+
   local not_break = true
   while not_break and node do
-    local advance_nodes = config.advances.languages[buf_ft](node)
+    local advance_nodes = get_advance_nodes(node, check_default_pattern)
 
     for i = #advance_nodes, 1, -1 do
       local advance_node = advance_nodes[i]
