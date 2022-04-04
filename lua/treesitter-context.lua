@@ -477,7 +477,7 @@ local function highlight_contexts(bufnr, ctx_bufnr, contexts)
     return
   end
 
-  local buf_query = buf_highlighter:get_query(vim.bo.filetype)
+  local buf_query = buf_highlighter:get_query(parsers.ft_to_lang(vim.bo.filetype))
 
   local query = buf_query:query()
   local root = get_root_node()
