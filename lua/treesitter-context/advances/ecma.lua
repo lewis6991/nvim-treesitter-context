@@ -9,7 +9,6 @@ return function(node, check_default_pattern)
     or node_type == 'function'
     or node_type == 'method_definition'
   then
-    print(node:field('body')[1]:child(2))
     advance_nodes[#advance_nodes + 1] = {
       node = node,
       begin_with = node:field('name')[1],

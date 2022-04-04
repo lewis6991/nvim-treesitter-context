@@ -152,7 +152,6 @@ local function get_text_for_node(advance_node)
   -- TODO: Write documentation
   local begin_with_node = advance_node.begin_with
   local end_before_node = advance_node.end_before
-  local end_before_extend_col = advance_node.end_before_extend_col or 0
   local end_with_node = advance_node.end_with
 
   local last_position
@@ -166,7 +165,6 @@ local function get_text_for_node(advance_node)
 
   if end_before_node then
     last_position = { end_before_node:start() }
-    last_position[2] = last_position[2] + end_before_extend_col
   elseif end_with_node then
     last_position = { end_with_node:end_() }
   end

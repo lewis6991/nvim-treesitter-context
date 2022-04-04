@@ -13,8 +13,7 @@ return function(node, check_default_pattern)
     advance_nodes[#advance_nodes + 1] = {
       node = node,
       begin_with = node:field('name')[1],
-      end_before = node:field('body')[1],
-      end_before_extend_col = 1,
+      end_before = node:field('body')[1]:child(1),
     }
   elseif
     -- for, do while, for(enhanced), while, try, catch, lambda
@@ -29,15 +28,13 @@ return function(node, check_default_pattern)
   then
     advance_nodes[#advance_nodes + 1] = {
       node = node,
-      end_before = node:field('body')[1],
-      end_before_extend_col = 1,
+      end_before = node:field('body')[1]:child(1),
     }
   elseif node_type == 'if_statement' then
     -- if
     advance_nodes[#advance_nodes + 1] = {
       node = node,
-      end_before = node:field('consequence')[1],
-      end_before_extend_col = 1,
+      end_before = node:field('consequence')[1]:child(1),
     }
     -- else
     local else_node = node:field('alternative')[1]
