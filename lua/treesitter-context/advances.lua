@@ -14,7 +14,14 @@ local function is_advance(config, buf_ft)
   return config.advances.enable and config.advances.languages[buf_ft]
 end
 
-local function get_parent_matches(config, node, buf_ft, max_topline, topline, max_lines)
+local function get_parent_matches(
+  config,
+  node,
+  buf_ft,
+  max_topline,
+  topline,
+  max_lines
+)
   local parent_matches = {}
   local possible_parent_matches = {}
   local full_parent_matches = {}
@@ -27,14 +34,14 @@ local function get_parent_matches(config, node, buf_ft, max_topline, topline, ma
 
     for i = #advance_nodes, 1, -1 do
       local advance_node = advance_nodes[i]
-      local ctx_node
-      if advance_node.begin then
-        ctx_node = advance_node.begin
+      local begin_node
+      if advance_node.begin_with then
+        begin_node = advance_node.begin_with
       else
-        ctx_node = advance_node.node
+        begin_node = advance_node.node
       end
-      if ctx_node then
-        local row = ctx_node:start()
+      if begin_node then
+        local row = begin_node:start()
 
         if row >= 0 and row ~= last_row and row < (max_topline - 1) then
           last_row = row
@@ -63,24 +70,27 @@ local function get_parent_matches(config, node, buf_ft, max_topline, topline, ma
   lines = 0
 
   for i = #possible_parent_matches, 1, -1 do
-    local row
-    if possible_parent_matches[i].begin then
-      row = possible_parent_matches[i].begin:start()
+    local possible_parent_node = possible_parent_matches[i]
+    local begin_node
+    if possible_parent_node.begin_with then
+      begin_node = possible_parent_node.begin_with
     else
-      row = possible_parent_matches[i].node:start()
+      begin_node = possible_parent_node.node
     end
-
-    -- check if line is not visible
-    if row then
-      if row < (real_topline - 1) then
-        table.insert(full_parent_matches, 1, possible_parent_matches[i])
-        real_topline = utils.get_next_line(real_topline)
-        lines = lines + 1
-        if max_lines > 0 and lines >= max_lines then
+    if begin_node then
+      local row = begin_node:start()
+      -- check if line is not visible
+      if row then
+        if row < (real_topline - 1) then
+          table.insert(full_parent_matches, 1, possible_parent_node)
+          real_topline = utils.get_next_line(real_topline)
+          lines = lines + 1
+          if max_lines > 0 and lines >= max_lines then
+            break
+          end
+        else -- else break when line is visible
           break
         end
-      else -- else break when line is visible
-        break
       end
     end
   end
@@ -118,28 +128,26 @@ local function get_text_for_node(advance_node)
   end
   start_col = 0
 
-  local begin_node = advance_node.begin
-  local before_node = advance_node.before
-  local before_include_col = advance_node.before_include_col or 0
-  local include_node = advance_node.include
+  -- TODO: Write documentation
+  local begin_with_node = advance_node.begin_with
+  local end_before_node = advance_node.end_before
+  local end_before_extend_col = advance_node.end_before_extend_col or 0
+  local end_with_node = advance_node.end_with
 
   local last_position
-  local leading_position
 
-  if begin_node then
-    leading_position = { begin_node:start() }
-
-    local new_start_row = leading_position[1]
+  if begin_with_node then
+    local new_start_row = begin_with_node:start()
     local begin_index = new_start_row - start_row
     lines = slice(lines, begin_index + 1, #lines)
     start_row = new_start_row
   end
 
-  if before_node then
-    last_position = { before_node:start() }
-    last_position[2] = last_position[2] + before_include_col
-  elseif include_node then
-    last_position = { include_node:end_() }
+  if end_before_node then
+    last_position = { end_before_node:start() }
+    last_position[2] = last_position[2] + end_before_extend_col
+  elseif end_with_node then
+    last_position = { end_with_node:end_() }
   end
 
   if last_position then

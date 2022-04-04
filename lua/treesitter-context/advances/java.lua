@@ -12,9 +12,9 @@ return function(node)
   then
     ctx_nodes[#ctx_nodes + 1] = {
       node = node,
-      begin = node:field('name')[1],
-      before = node:field('body')[1],
-      before_include_col = 1,
+      begin_with = node:field('name')[1],
+      end_before = node:field('body')[1],
+      end_before_extend_col = 1,
     }
   elseif
     -- for, do while, for(enhanced), while, try, catch, lambda
@@ -29,22 +29,22 @@ return function(node)
   then
     ctx_nodes[#ctx_nodes + 1] = {
       node = node,
-      before = node:field('body')[1],
-      before_include_col = 1,
+      end_before = node:field('body')[1],
+      end_before_extend_col = 1,
     }
   elseif node_type == 'if_statement' then
     -- if
     ctx_nodes[#ctx_nodes + 1] = {
       node = node,
-      before = node:field('consequence')[1],
-      before_include_col = 1,
+      end_before = node:field('consequence')[1],
+      end_before_extend_col = 1,
     }
     -- else
     local else_node = node:field('alternative')[1]
     if else_node and else_node:type() == 'block' then
       ctx_nodes[#ctx_nodes + 1] = {
         node = node,
-        begin = else_node,
+        begin_with = else_node,
       }
     end
   -- elseif node_type == 'switch_block' then
@@ -53,7 +53,7 @@ return function(node)
   --   for i = 0, child_count - 1  do
   --     ctx_nodes[#ctx_nodes + 1] = {
   --       node = node,
-  --       begin = node:child(i),
+  --       begin_with = node:child(i),
   --     }
   --   end
   elseif node_type == 'switch_block_statement_group' then
