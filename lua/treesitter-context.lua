@@ -570,6 +570,11 @@ function M.enable()
   enabled = true
 end
 
+function M.delete()
+  M.close()
+  delete_bufs()
+end
+
 function M.disable()
   nvim_augroup('treesitter_context_update', {})
   M.close()
@@ -624,6 +629,7 @@ function M.setup(options)
   end
 end
 
+vim.cmd('command! -bar TSContextDelete  lua require("treesitter-context").delete()')
 vim.cmd('command! TSContextEnable  lua require("treesitter-context").enable()')
 vim.cmd('command! TSContextDisable lua require("treesitter-context").disable()')
 vim.cmd('command! TSContextToggle  lua require("treesitter-context").toggle()')
