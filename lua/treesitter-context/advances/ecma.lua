@@ -43,7 +43,7 @@ return function(node, check_default_pattern)
         begin_with = else_node,
       }
     end
-  elseif node_type == 'object' then
+  elseif node_type == 'object' or node_type == 'switch_case' then
     -- current case of switch
     advance_nodes[#advance_nodes + 1] = {
       node = node,
