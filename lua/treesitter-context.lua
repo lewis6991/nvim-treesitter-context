@@ -521,6 +521,9 @@ local function open(ctx_nodes)
     return
   end
 
+  -- prevent cursor overlap with the context text
+  vim.wo.scrolloff = #contexts
+
   set_lines(gbufnr, lno_text)
 
   highlight_contexts(bufnr, ctx_bufnr, contexts)
