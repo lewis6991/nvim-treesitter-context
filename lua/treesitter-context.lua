@@ -307,18 +307,6 @@ local M = {
   config = config,
 }
 
-local function reverse_table(t)
-  local r = {}
-
-  if t then
-    for i = #t, 1, -1 do
-      r[#r+1] = t[i]
-    end
-  end
-
-  return r
-end
-
 local function get_parent_matches(max_lines)
   if max_lines == 0 then
     return
@@ -354,7 +342,7 @@ local function get_parent_matches(max_lines)
     if is_valid(parent, vim.bo.filetype)
         and row < (topline + #parent_matches - 1)
         and row ~= last_row then
-      table.insert(parent_matches, 1, parent)
+      parent_matches[#parent_matches+1] = parent
 
       lines = lines + 1
       last_row = row
@@ -365,7 +353,7 @@ local function get_parent_matches(max_lines)
     end
   end
 
-  return reverse_table(parent_matches)
+  return parent_matches
 end
 
 local function throttle_fn(fn)
