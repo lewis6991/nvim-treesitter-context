@@ -319,6 +319,18 @@ local function reverse_table(t)
   return r
 end
 
+--- Get next line with folding calculation
+---@param line string Current line
+---@return number _ Next line
+local function get_next_line(line)
+  local foldend_line = vim.fn.foldclosedend(line)
+  if (foldend_line ~= -1) then
+    return foldend_line + 1
+  else
+    return line + 1
+  end
+end
+
 local function get_parent_matches(max_lines)
   if max_lines == 0 then
     return
@@ -339,33 +351,72 @@ local function get_parent_matches(max_lines)
   local lines = 0
   local last_row = -1
   local topline = vim.fn.line('w0')
+  local max_topline = lnum - 1
 
   -- save nodes in a table to iterate from top to bottom
-  local parents = {}
+  local reversed_parents = {}
+  local reversed_possible_parents = {}
   while node ~= nil do
-    parents[#parents+1] = node
+    local row = node:start()
+
+    if is_valid(node, vim.bo.filetype)
+        and row <= max_topline - 1
+        and row ~= last_row then
+      last_row = row
+
+      if row < topline - 1 then
+        lines = lines + 1
+        reversed_parents[#reversed_parents+1] = node
+
+        if max_lines > 0 and lines >= max_lines then
+          break
+        end
+      else
+        reversed_possible_parents[#reversed_possible_parents+1] = node
+      end
+    end
+
     node = node:parent()
   end
 
-  for i = #parents, 1, -1 do
-    local parent = parents[i]
-    local row = parent:start()
+  -- detect real topline with context
+  local real_topline = topline
+  for _ = 1, #reversed_parents do
+    real_topline = get_next_line(real_topline)
+  end
+  lines = 0 -- reset for later use
 
-    if is_valid(parent, vim.bo.filetype)
-        and row < (topline + #parent_matches - 1)
-        and row ~= last_row then
-      table.insert(parent_matches, 1, parent)
-
+  -- scan for possible parents
+  for i = #reversed_possible_parents, 1, -1 do
+    local possible_parent = reversed_possible_parents[i]
+    local row = possible_parent:start()
+    if row < real_topline - 1 then
+      parent_matches[#parent_matches+1] = possible_parent
+      real_topline = get_next_line(real_topline)
       lines = lines + 1
-      last_row = row
-
-      if lines >= max_lines then
+      if max_lines > 0 and lines >= max_lines then
         break
       end
+    elseif real_topline > max_topline then
+      break
     end
   end
 
-  return reverse_table(parent_matches)
+  -- merge with possible parents
+  if #parent_matches == 0 then
+    parent_matches = reverse_table(reversed_parents)
+  else
+    for _, parent in ipairs(reversed_parents) do
+      -- check max_lines first because can be lines > 0
+      if max_lines > 0 and lines >= max_lines then
+        break
+      end
+      table.insert(parent_matches, 1, parent)
+      lines = lines + 1
+    end
+  end
+
+  return parent_matches
 end
 
 local function throttle_fn(fn)
@@ -533,13 +584,33 @@ local function open(ctx_nodes)
   highlight_contexts(bufnr, ctx_bufnr, contexts)
 end
 
+--- Calculate relative line between 2 line work with folding
+---@param line1 number First line
+---@param line2 number Second line
+---@return number relativeline Relative line
+local function calc_relativeline(line1, line2)
+  local line, higher_line = line1, line2
+  if line1 > line2 then
+    line, higher_line = line2, line1
+  end
+
+  local relativeline = 0
+  local i = line
+  while i < higher_line do
+    i = get_next_line(i)
+    relativeline = relativeline + 1
+  end
+
+  return relativeline
+end
+
 local function calc_max_lines(config_max)
   local max_lines = config_max
   max_lines = max_lines == 0 and -1 or max_lines
 
   local wintop = vim.fn.line('w0')
   local cursor = vim.fn.line('.')
-  local max_from_cursor = cursor - wintop
+  local max_from_cursor = calc_relativeline(wintop, cursor)
   if max_lines ~= -1 then
     max_lines = math.min(max_lines, max_from_cursor)
   else
