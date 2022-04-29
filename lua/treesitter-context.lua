@@ -307,11 +307,19 @@ local M = {
   config = config,
 }
 
-local function get_parent_matches(max_lines)
-  if max_lines == 0 then
-    return
+--- Get next line with folding calculation
+---@param line string Current line
+---@return number _ Next line
+local function get_next_line(line)
+  local foldend_line = vim.fn.foldclosedend(line)
+  if (foldend_line ~= -1) then
+    return foldend_line + 1
+  else
+    return line + 1
   end
+end
 
+local function get_parent_matches()
   if not parsers.has_parser() then
     return
   end
@@ -327,6 +335,7 @@ local function get_parent_matches(max_lines)
   local lines = 0
   local last_row = -1
   local topline = vim.fn.line('w0')
+  local max_lines = config.max_lines
 
   -- save nodes in a table to iterate from top to bottom
   local parents = {}
@@ -335,21 +344,28 @@ local function get_parent_matches(max_lines)
     node = node:parent()
   end
 
+  -- detect real topline with context
+  local real_topline = topline
   for i = #parents, 1, -1 do
     local parent = parents[i]
     local row = parent:start()
 
+    local is_overflowed = row >= real_topline - 1 or real_topline >= lnum
     if is_valid(parent, vim.bo.filetype)
-        and row < (topline + #parent_matches - 1)
+        and not is_overflowed
         and row ~= last_row then
       parent_matches[#parent_matches+1] = parent
+
+      real_topline = get_next_line(real_topline)
 
       lines = lines + 1
       last_row = row
 
-      if lines >= max_lines then
+      if max_lines > 0 and lines >= max_lines then
         break
       end
+    elseif is_overflowed then
+      break
     end
   end
 
@@ -521,29 +537,13 @@ local function open(ctx_nodes)
   highlight_contexts(bufnr, ctx_bufnr, contexts)
 end
 
-local function calc_max_lines(config_max)
-  local max_lines = config_max
-  max_lines = max_lines == 0 and -1 or max_lines
-
-  local wintop = vim.fn.line('w0')
-  local cursor = vim.fn.line('.')
-  local max_from_cursor = cursor - wintop
-  if max_lines ~= -1 then
-    max_lines = math.min(max_lines, max_from_cursor)
-  else
-    max_lines = max_from_cursor
-  end
-
-  return max_lines
-end
-
 local function update_context()
   if vim.bo.buftype ~= '' or vim.wo.previewwindow then
     close()
     return
   end
 
-  local context = get_parent_matches(calc_max_lines(config.max_lines))
+  local context = get_parent_matches()
 
   if context and #context ~= 0 then
     if context == previous_nodes then
