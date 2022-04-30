@@ -14,6 +14,7 @@ local defaultConfig = {
   enable = true,
   throttle = false,
   max_lines = 0, -- no limit
+  cursor_padding = 0,
 }
 
 local config = {}
@@ -604,8 +605,9 @@ local function calc_relativeline(line1, line2)
   return relativeline
 end
 
-local function calc_max_lines(config_max)
+local function calc_max_lines(config_max, cursor_padding)
   local max_lines = config_max
+  cursor_padding = cursor_padding or 0
   max_lines = max_lines == 0 and -1 or max_lines
 
   local wintop = vim.fn.line('w0')
@@ -616,6 +618,7 @@ local function calc_max_lines(config_max)
   else
     max_lines = max_from_cursor
   end
+  max_lines = math.max(max_lines - cursor_padding, 0)
 
   return max_lines
 end
@@ -626,7 +629,9 @@ local function update_context()
     return
   end
 
-  local context = get_parent_matches(calc_max_lines(config.max_lines))
+  local context = get_parent_matches(
+    calc_max_lines(config.max_lines, config.cursor_padding)
+  )
 
   if context and #context ~= 0 then
     if context == previous_nodes then
